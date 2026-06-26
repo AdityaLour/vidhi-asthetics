@@ -1,7 +1,6 @@
 import pool from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import crypto from "crypto";
+import { createSession } from "@/lib/session";
 
 export async function POST(request) {
   const body = await request.json();
@@ -90,30 +89,9 @@ export async function POST(request) {
       [cleanEmail, hashedPassword],
     );
 
-    const sessionToken = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-
-    await connection.execute(
-      `
-      INSERT INTO sessions (user_id, session_token, expires_at)
-      VALUES (?, ?, ?)
-      `,
-      [result.insertId, sessionToken, expiresAt],
-    );
+    await createSession(connection, result.insertId);
 
     await connection.commit();
-
-    const cookieStore = await cookies();
-
-    cookieStore.set({
-      name: "session",
-      value: sessionToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      expires: expiresAt,
-      path: "/",
-    });
 
     return Response.json(
       {
