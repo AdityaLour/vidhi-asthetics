@@ -89,6 +89,8 @@ export async function POST(request) {
       {
         success: true,
         message: "Login successful",
+        role: user.role,
+
       },
       {
         status: 200,
