@@ -31,7 +31,7 @@ export default function NewProductPage() {
     const response = await fetch("/api/admin/products", {
       method: "POST",
       headers: {
-        "Content-type": "appilication/json",
+        "Content-type": "application/json",
       },
       body: JSON.stringify(product),
     });
