@@ -29,6 +29,38 @@ export default function CategoryTable({ initialCategories }) {
     setCategories((prev) => prev.filter((category) => category.id !== id));
   }
 
+  async function handleEdit(category) {
+    const newName = window.prompt("Edit Category", category.name);
+
+    if (!newName || newName.trim() === "") {
+      return;
+    }
+
+    const response = await fetch(`/api/admin/categories/${category.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: newName.trim(),
+      }),
+    });
+
+    const data = await response.json();
+
+    alert(data.message);
+
+    if (!response.ok) {
+      return;
+    }
+
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === category.id ? { ...c, name: newName.trim() } : c,
+      ),
+    );
+  }
+
   return (
     <div>
       {categories.length === 0 ? (
@@ -48,7 +80,7 @@ export default function CategoryTable({ initialCategories }) {
             </span>
 
             <div>
-              <button>Edit</button>
+              <button onClick={() => handleEdit(category)}>Edit</button>
 
               <button onClick={() => handleDelete(category.id)}>Delete</button>
             </div>
