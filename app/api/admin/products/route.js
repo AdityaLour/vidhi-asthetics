@@ -30,6 +30,8 @@ export async function POST(request) {
         const displayOrder = Number(body.display_order || 0)
         const status = body.status;
 
+        const categories = body.categories;
+
         if (!cleanName) {
             return Response.json(
                 {
@@ -144,6 +146,18 @@ export async function POST(request) {
             );
         }
 
+        if (!Array.isArray(categories) || categories.length === 0) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Please select at least one category.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
         const slug = cleanName
             .toLowerCase()
             .trim()
@@ -177,6 +191,30 @@ export async function POST(request) {
         }
 
 
+        const uniqueCategories = [...new Set(categories)];
+
+        const placeholders = uniqueCategories.map(() => "?").join(",");
+
+        const [validCategories] = await connection.execute(
+            `
+            SELECT id
+            FROM categories
+            WHERE id IN (${placeholders})
+            `,
+            uniqueCategories
+        );
+
+        if (validCategories.length !== uniqueCategories.length) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "One or more selected categories are invalid.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
 
         await connection.beginTransaction()
 
@@ -201,8 +239,18 @@ export async function POST(request) {
 
         const productId = result.insertId
 
-        await connection.commit()
+        for (const categoryId of uniqueCategories) {
+            await connection.execute(
+                `
+                INSERT INTO product_categories (product_id, category_id)
+                VALUES (?, ?)
+                `,
+                [productId, categoryId]
+            );
 
+        }
+
+        await connection.commit()
 
         return Response.json(
             {
@@ -214,6 +262,7 @@ export async function POST(request) {
                 status: 201
             }
         );
+
     } catch (error) {
         console.log(error);
 
