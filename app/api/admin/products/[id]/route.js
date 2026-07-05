@@ -556,3 +556,132 @@ export async function PATCH(request, { params }) {
         }
     }
 }
+
+
+
+export async function DELETE(request, { params }) {
+    let connection;
+
+    try {
+        const admin = await requireAdmin();
+
+        if (!admin) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Unauthorized",
+                },
+                {
+                    status: 401,
+                }
+            );
+        }
+
+        const { id } = await params;
+        const productId = Number(id);
+
+        if (Number.isNaN(productId) || productId <= 0) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Invalid product id.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+        connection = await pool.getConnection();
+
+        const [existingProduct] = await connection.execute(
+            `
+            SELECT id
+            FROM products
+            WHERE id = ?
+            LIMIT 1
+            `,
+            [productId]
+        );
+
+        if (existingProduct.length === 0) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Product not found.",
+                },
+                {
+                    status: 404,
+                }
+            );
+        }
+
+        const [productImages] = await connection.execute(
+            `
+            SELECT storage_key
+            FROM product_images
+            WHERE product_id = ?
+            `,
+            [productId]
+        );
+
+
+        await connection.beginTransaction()
+
+        await connection.execute(
+            `
+            DELETE FROM products
+            WHERE id = ?
+            `,
+            [productId]
+        );
+
+        await connection.commit()
+
+        for (const image of productImages) {
+            try {
+                await imagekit.deleteFile(image.storage_key);
+            } catch (error) {
+                console.error(
+                    "Failed to delete ImageKit file:",
+                    error
+                );
+            }
+        }
+
+        return Response.json(
+            {
+                success: true,
+                message: "Product deleted successfully.",
+            },
+            {
+                status: 200,
+            }
+        );
+
+    } catch (error) {
+        console.error("Delete Product Error:", error);
+
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Rollback failed:", rollbackError);
+            }
+        }
+
+        return Response.json(
+            {
+                success: false,
+                message: "Internal Server Error",
+            },
+            {
+                status: 500,
+            }
+        );
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+}
