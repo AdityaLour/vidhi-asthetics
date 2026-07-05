@@ -1,8 +1,10 @@
 import pool from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import imagekit from "@/lib/imagekit";
 
 export async function POST(request) {
     let connection;
+    const uploadedImages = [];
     try {
         const admin = await requireAdmin();
 
@@ -15,22 +17,25 @@ export async function POST(request) {
             })
         };
 
-        const body = await request.json()
+        const formData = await request.formData();
 
-        const cleanName = body.name?.trim()
-        const cleanDescription = body.description?.trim()
+        const cleanName = formData.get("name")?.trim();
+        const cleanDescription = formData.get("description")?.trim();
 
-        const price = Number(body.price)
-        const discount = Number(body.discount_percentage || 0);
-        const stock = Number(body.stock)
-        const lowStockThreshold = Number(body.low_stock_threshold)
+        const price = Number(formData.get("price"));
+        const discount = Number(formData.get("discount_percentage") || 0);
+        const stock = Number(formData.get("stock"));
+        const lowStockThreshold = Number(formData.get("low_stock_threshold"));
 
+        const featured = formData.get("featured") === "true";
+        const displayOrder = Number(formData.get("display_order") || 0);
+        const status = formData.get("status");
 
-        const featured = body.featured
-        const displayOrder = Number(body.display_order || 0)
-        const status = body.status;
+        const categories = formData
+            .getAll("categories")
+            .map(Number);
 
-        const categories = body.categories;
+        const images = formData.getAll("images");
 
         if (!cleanName) {
             return Response.json(
@@ -158,6 +163,67 @@ export async function POST(request) {
             );
         }
 
+        if (images.length === 0) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Please upload at least one image.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+        if (images.length > 5) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "You can upload a maximum of 5 images.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+
+        const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
+        for (const image of images) {
+            if (image.size > MAX_IMAGE_SIZE) {
+                return Response.json(
+                    {
+                        success: false,
+                        message: "Each image must be smaller than 10 MB.",
+                    },
+                    {
+                        status: 400,
+                    }
+                );
+            }
+        }
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        for (const image of images) {
+            if (!allowedTypes.includes(image.type)) {
+                return Response.json(
+                    {
+                        success: false,
+                        message: "Only JPG, PNG and WEBP images are allowed.",
+                    },
+                    {
+                        status: 400,
+                    }
+                );
+            }
+        }
+
         const slug = cleanName
             .toLowerCase()
             .trim()
@@ -190,7 +256,6 @@ export async function POST(request) {
             );
         }
 
-
         const uniqueCategories = [...new Set(categories)];
 
         const placeholders = uniqueCategories.map(() => "?").join(",");
@@ -205,6 +270,9 @@ export async function POST(request) {
         );
 
         if (validCategories.length !== uniqueCategories.length) {
+            for (const image of uploadedImages) {
+                await imagekit.deleteFile(image.fileId);
+            }
             return Response.json(
                 {
                     success: false,
@@ -216,8 +284,22 @@ export async function POST(request) {
             );
         }
 
-        await connection.beginTransaction()
+        for (const image of images) {
+            const arrayBuffer = await image.arrayBuffer();
 
+            const buffer = Buffer.from(arrayBuffer);
+
+            const uploadResponse = await imagekit.upload({
+                file: buffer,
+                fileName: image.name,
+                folder: "/products",
+                useUniqueFileName: true,
+            });;
+
+            uploadedImages.push(uploadResponse);
+        }
+
+        await connection.beginTransaction()
 
         const [result] = await connection.execute(
             `INSERT INTO products
@@ -250,6 +332,34 @@ export async function POST(request) {
 
         }
 
+        let imageDisplayOrder = 1;
+        for (const image of uploadedImages) {
+            await connection.execute(
+                `
+                INSERT INTO product_images
+                (
+                    product_id,
+                    image_url,
+                    storage_key,
+                    file_name,
+                    is_primary,
+                    display_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                `,
+                [
+                    productId,
+                    image.url,
+                    image.fileId,
+                    image.name,
+                    imageDisplayOrder === 1,
+                    imageDisplayOrder,
+                ]
+            );
+
+            imageDisplayOrder++;
+        }
+
         await connection.commit()
 
         return Response.json(
@@ -262,14 +372,27 @@ export async function POST(request) {
                 status: 201
             }
         );
-
     } catch (error) {
         console.log(error);
 
         if (connection) {
-            await connection.rollback();
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error("Rollback failed:", rollbackError);
+            }
         }
 
+        for (const image of uploadedImages) {
+            try {
+                await imagekit.deleteFile(image.fileId);
+            } catch (error) {
+                console.error(
+                    "Failed to delete uploaded image:",
+                    error
+                );
+            }
+        }
 
         return Response.json({
             success: false,

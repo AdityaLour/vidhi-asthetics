@@ -9,37 +9,55 @@ export default function ProductForm({ categories }) {
   const [discount, setDiscount] = useState("");
   const [stock, setStock] = useState("");
   const [lowStockThreshold, setLowStockThreshold] = useState("");
-  const [featured, setFeatured] = useState("");
+  const [featured, setFeatured] = useState(false);
   const [displayOrder, setDisplayOrder] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("inactive");
   const [selectedCategories, setSelectedCategories] = useState([]);
+  const [images, setImages] = useState([]);
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const product = {
-      name,
-      description,
-      price,
-      discount_percentage: discount,
-      stock,
-      low_stock_threshold: lowStockThreshold,
-      featured,
-      display_order: displayOrder,
-      status,
-      categories: selectedCategories,
-    };
+    const formData = new FormData();
 
-    const response = await fetch("/api/admin/products", {
-      method: "POST",
-      headers: {
-        "Content-type": "application/json",
-      },
-      body: JSON.stringify(product),
+    formData.append("name", name);
+    formData.append("description", description);
+    formData.append("price", price);
+    formData.append("discount_percentage", discount);
+    formData.append("stock", stock);
+    formData.append("low_stock_threshold", lowStockThreshold);
+    formData.append("featured", featured);
+    formData.append("display_order", displayOrder);
+    formData.append("status", status);
+
+    selectedCategories.forEach((categoryId) => {
+      formData.append("categories", categoryId);
     });
 
-    const data = await response.json();
-    console.log(data);
+    images.forEach((image) => {
+      formData.append("images", image);
+    });
+
+    try {
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      console.log(data);
+
+      if (!response.ok) {
+        alert(data.message);
+        return;
+      }
+
+      alert("Product created successfully.");
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong.");
+    }
   }
 
   return (
@@ -63,7 +81,7 @@ export default function ProductForm({ categories }) {
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-          ></textarea>
+          />
         </div>
 
         <br />
@@ -136,6 +154,7 @@ export default function ProductForm({ categories }) {
 
         <div>
           <label>Status</label>
+
           <select value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="inactive">Inactive</option>
             <option value="active">Active</option>
@@ -156,6 +175,7 @@ export default function ProductForm({ categories }) {
                 <input
                   type="checkbox"
                   value={category.id}
+                  checked={selectedCategories.includes(category.id)}
                   onChange={(e) => {
                     const categoryId = Number(e.target.value);
 
@@ -174,6 +194,29 @@ export default function ProductForm({ categories }) {
             </div>
           ))}
         </div>
+
+        <br />
+
+        <div>
+          <label>Product Images</label>
+
+          <br />
+
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => {
+              setImages(Array.from(e.target.files));
+            }}
+          />
+
+          <p>
+            Selected Images: <strong>{images.length}</strong>
+          </p>
+        </div>
+
+        <br />
 
         <button type="submit">Create Product</button>
       </form>
