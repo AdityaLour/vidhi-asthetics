@@ -12,13 +12,13 @@ export default async function AdminLayout({ children }) {
   }
 
   return (
-    <div>
+    <div className="admin-layout">
       <Sidebar />
 
-      <div>
+      <div className="admin-content">
         <Header />
 
-        <main>{children}</main>
+        <main className="admin-main">{children}</main>
       </div>
     </div>
   );
