@@ -2,6 +2,94 @@ import pool from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import imagekit from "@/lib/imagekit";
 
+
+export async function GET() {
+    let connection;
+
+    try {
+        const admin = await requireAdmin();
+
+        if (!admin) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Unauthorized",
+                },
+                {
+                    status: 401,
+                }
+            );
+        }
+
+        connection = await pool.getConnection();
+
+        const [products] = await connection.execute(`
+            SELECT
+                p.id,
+                p.name,
+                p.slug,
+                p.description,
+                p.price,
+                p.discount_percentage,
+                p.stock,
+                p.low_stock_threshold,
+                p.featured,
+                p.display_order,
+                p.status,
+
+                GROUP_CONCAT(
+                    DISTINCT c.name
+                    ORDER BY c.name
+                    SEPARATOR ', '
+                ) AS categories,
+
+                (
+                    SELECT image_url
+                    FROM product_images
+                    WHERE product_id = p.id
+                    AND is_primary = TRUE
+                    LIMIT 1
+                ) AS primary_image
+
+            FROM products p
+
+            LEFT JOIN product_categories pc
+                ON p.id = pc.product_id
+
+            LEFT JOIN categories c
+                ON pc.category_id = c.id
+
+            GROUP BY p.id
+
+            ORDER BY
+                p.display_order ASC,
+                p.id DESC
+        `);
+
+        return Response.json({
+            success: true,
+            products,
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        return Response.json(
+            {
+                success: false,
+                message: "Internal Server Error",
+            },
+            {
+                status: 500,
+            }
+        );
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+}
+
 export async function POST(request) {
     let connection;
     const uploadedImages = [];

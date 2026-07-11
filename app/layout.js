@@ -1,7 +1,9 @@
+import { Finger_Paint } from "next/font/google";
 import "./globals.css";
 import "@/styles/admin-layout.css";
 import "@/styles/sidebar.css"
 import "@/styles/products.css";
+import "@/styles/overlay.css";
 
 export const metadata = {
   title: "Vidhi Asthetics",
