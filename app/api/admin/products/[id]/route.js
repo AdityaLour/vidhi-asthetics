@@ -1,6 +1,73 @@
 import pool from "@/lib/db";
 import imagekit from "@/lib/imagekit";
 import { requireAdmin } from "@/lib/session";
+import { getProductById } from "@/lib/product";
+
+export async function GET(request, { params }) {
+    try {
+        const admin = await requireAdmin();
+
+        if (!admin) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Unauthorized",
+                },
+                {
+                    status: 401,
+                }
+            );
+        }
+
+        const { id } = await params;
+
+        const productId = Number(id);
+
+        if (Number.isNaN(productId) || productId <= 0) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Invalid product id.",
+                },
+                {
+                    status: 400,
+                }
+            );
+        }
+
+        const product = await getProductById(productId);
+
+        if (!product) {
+            return Response.json(
+                {
+                    success: false,
+                    message: "Product not found.",
+                },
+                {
+                    status: 404,
+                }
+            );
+        }
+
+        return Response.json({
+            success: true,
+            product,
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        return Response.json(
+            {
+                success: false,
+                message: "Internal Server Error",
+            },
+            {
+                status: 500,
+            }
+        );
+    }
+}
 
 export async function PATCH(request, { params }) {
     let connection;
@@ -556,8 +623,6 @@ export async function PATCH(request, { params }) {
         }
     }
 }
-
-
 
 export async function DELETE(request, { params }) {
     let connection;
