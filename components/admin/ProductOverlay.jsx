@@ -17,7 +17,7 @@ export default function ProductOverlay({ productId, onClose }) {
 
   async function loadProduct() {
     try {
-      console.log("Loading product", productId);
+      console.log("Loading product");
 
       const response = await fetch(`/api/admin/products/${productId}`);
 
@@ -154,7 +154,12 @@ export default function ProductOverlay({ productId, onClose }) {
         <h2>Loading...</h2>
       ) : (
         <div className="product-overlay-content">
-          <ProductImageSection product={draftProduct} isEditing={isEditing} />
+          <ProductImageSection
+            product={draftProduct}
+            isEditing={isEditing}
+            reloadProduct={loadProduct}
+            setMessage={setMessage}
+          />
 
           <ProductInfoSection
             product={draftProduct}

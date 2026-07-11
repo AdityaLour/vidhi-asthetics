@@ -21,10 +21,10 @@ export async function POST(request, { params }) {
             );
         }
 
-        const productId = Number(params.id);
+        const { id } = await params;
+        const productId = Number(id);
 
         const formData = await request.formData();
-
         const images = formData.getAll("images");
 
         if (images.length === 0) {
@@ -89,17 +89,17 @@ export async function POST(request, { params }) {
 
             await connection.execute(
                 `
-        INSERT INTO product_images
-        (
-          product_id,
-          image_url,
-          storage_key,
-          file_name,
-          is_primary,
-          display_order
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-        `,
+                INSERT INTO product_images
+                (
+                product_id,
+                image_url,
+                storage_key,
+                file_name,
+                is_primary,
+                display_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                `,
                 [
                     productId,
                     uploadResponse.url,
@@ -141,3 +141,4 @@ export async function POST(request, { params }) {
         }
     }
 }
+

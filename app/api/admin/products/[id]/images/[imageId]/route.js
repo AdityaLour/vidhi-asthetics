@@ -1,3 +1,7 @@
+import pool from "@/lib/db";
+import imagekit from "@/lib/imagekit";
+import { requireAdmin } from "@/lib/session";
+
 export async function PATCH(request, { params }) {
     let connection;
 
@@ -16,11 +20,12 @@ export async function PATCH(request, { params }) {
             );
         }
 
-        const productId = Number(params.id);
-        const imageId = Number(params.imageId);
+        const { id, imageId } = await params;
+
+        const productId = Number(id);
+        const imageIdNumber = Number(imageId);
 
         connection = await pool.getConnection();
-
         await connection.beginTransaction();
 
         await connection.execute(
@@ -38,7 +43,7 @@ export async function PATCH(request, { params }) {
       SET is_primary = TRUE
       WHERE id = ?
       `,
-            [imageId]
+            [imageIdNumber]
         );
 
         await connection.commit();
@@ -88,8 +93,11 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        const productId = Number(params.id);
-        const imageId = Number(params.imageId);
+        const { id, imageId } = await params;
+
+        const productId = Number(id);
+        const imageIdNumber = Number(imageId);
+
 
         connection = await pool.getConnection();
 
@@ -116,7 +124,7 @@ export async function DELETE(request, { params }) {
         }
 
         const image = images.find(
-            (img) => img.id === imageId
+            (img) => img.id === imageIdNumber
         );
 
         if (!image) {
@@ -140,7 +148,7 @@ export async function DELETE(request, { params }) {
       DELETE FROM product_images
       WHERE id = ?
       `,
-            [imageId]
+            [imageIdNumber]
         );
 
         if (image.is_primary) {

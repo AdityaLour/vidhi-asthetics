@@ -133,7 +133,9 @@ export default function ProductInfoSection({ product, setProduct, isEditing }) {
 
       {/* FEATURED */}
 
-      <div className="info-row">
+      {/* FEATURED */}
+
+      <div className="info-row featured-row">
         <span>Featured</span>
 
         {isEditing ? (
@@ -151,8 +153,6 @@ export default function ProductInfoSection({ product, setProduct, isEditing }) {
           <strong>{product.featured ? "Yes" : "No"}</strong>
         )}
       </div>
-
-      {/* CATEGORIES */}
 
       {/* CATEGORIES */}
 
