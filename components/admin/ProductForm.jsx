@@ -14,6 +14,7 @@ export default function ProductForm({ categories }) {
   const [status, setStatus] = useState("inactive");
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [images, setImages] = useState([]);
+  const [message, setMessage] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -46,179 +47,265 @@ export default function ProductForm({ categories }) {
 
       const data = await response.json();
 
-      console.log(data);
-
       if (!response.ok) {
-        alert(data.message);
+        setMessage({
+          type: "error",
+          text: data.message,
+        });
         return;
       }
 
-      alert("Product created successfully.");
+      setMessage({
+        type: "success",
+        text: "Product created successfully.",
+      });
+
+      setName("");
+      setDescription("");
+      setPrice("");
+      setDiscount("");
+      setStock("");
+      setLowStockThreshold("");
+      setFeatured(false);
+      setDisplayOrder("");
+      setStatus("inactive");
+      setSelectedCategories([]);
+      setImages([]);
     } catch (error) {
       console.error(error);
-      alert("Something went wrong.");
+
+      setMessage({
+        type: "error",
+        text: "Something went wrong.",
+      });
     }
   }
 
   return (
-    <div>
-      <h1>Create Product</h1>
+    <div className="create-product-page">
+      <div className="create-product-header">
+        <h1>Create Product</h1>
+        <p>Add a new product to your catalog.</p>
+      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div>
+      <form className="product-form" onSubmit={handleSubmit}>
+        {message && (
+          <div className={`overlay-message ${message.type}`}>
+            {message.text}
+          </div>
+        )}
+
+        <div className="form-group">
           <label>Product Name</label>
+
           <input
+            className="form-input"
             type="text"
+            placeholder="Last of Us Painting"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
 
-        <br />
+        <div className="form-group">
+          <div className="description-header">
+            <label>Description</label>
 
-        <div>
-          <label>Description</label>
+            <span
+              className={`character-count ${
+                description.length >= 950
+                  ? "danger"
+                  : description.length >= 800
+                    ? "warning"
+                    : ""
+              }`}
+            >
+              {description.length} / 1000
+            </span>
+          </div>
+
           <textarea
+            className="form-input"
+            rows={6}
+            maxLength={1000}
+            placeholder="Describe your product..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+
+          <small className="description-help">
+            Maximum 1000 characters allowed.
+          </small>
         </div>
 
-        <br />
+        <div className="form-row">
+          <div className="form-group">
+            <label>Price</label>
 
-        <div>
-          <label>Price</label>
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-          />
+            <input
+              className="form-input"
+              type="number"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Discount Percentage</label>
+
+            <input
+              className="form-input"
+              type="number"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+            />
+          </div>
         </div>
 
-        <br />
+        <div className="form-row">
+          <div className="form-group">
+            <label>Stock</label>
 
-        <div>
-          <label>Discount Percentage</label>
-          <input
-            type="number"
-            value={discount}
-            onChange={(e) => setDiscount(e.target.value)}
-          />
+            <input
+              className="form-input"
+              type="number"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Low Stock Threshold</label>
+
+            <input
+              className="form-input"
+              type="number"
+              value={lowStockThreshold}
+              onChange={(e) => setLowStockThreshold(e.target.value)}
+            />
+          </div>
         </div>
 
-        <br />
+        <div className="form-row">
+          <div className="form-group">
+            <label>Display Order</label>
 
-        <div>
-          <label>Stock</label>
-          <input
-            type="number"
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-          />
+            <input
+              className="form-input"
+              type="number"
+              value={displayOrder}
+              onChange={(e) => setDisplayOrder(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Status</label>
+
+            <select
+              className="form-input"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="inactive">Inactive</option>
+              <option value="active">Active</option>
+              <option value="out_of_stock">Out Of Stock</option>
+            </select>
+          </div>
         </div>
 
-        <br />
+        <div className="featured-row">
+          <label className="featured-toggle">
+            <input
+              type="checkbox"
+              checked={featured}
+              onChange={(e) => setFeatured(e.target.checked)}
+            />
 
-        <div>
-          <label>Low Stock Threshold</label>
-          <input
-            type="number"
-            value={lowStockThreshold}
-            onChange={(e) => setLowStockThreshold(e.target.value)}
-          />
+            <span>Featured Product</span>
+          </label>
         </div>
 
-        <br />
-
-        <div>
-          <label>Featured</label>
-          <input
-            type="checkbox"
-            checked={featured}
-            onChange={(e) => setFeatured(e.target.checked)}
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label>Display Order</label>
-          <input
-            type="number"
-            value={displayOrder}
-            onChange={(e) => setDisplayOrder(e.target.value)}
-          />
-        </div>
-
-        <br />
-
-        <div>
-          <label>Status</label>
-
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="inactive">Inactive</option>
-            <option value="active">Active</option>
-            <option value="out_of_stock">Out Of Stock</option>
-          </select>
-        </div>
-
-        <br />
-
-        <div>
+        <div className="form-group">
           <label>Categories</label>
 
-          <br />
-
-          {categories.map((category) => (
-            <div key={category.id}>
-              <label>
-                <input
-                  type="checkbox"
-                  value={category.id}
-                  checked={selectedCategories.includes(category.id)}
-                  onChange={(e) => {
-                    const categoryId = Number(e.target.value);
-
-                    if (e.target.checked) {
-                      setSelectedCategories((prev) => [...prev, categoryId]);
-                    } else {
-                      setSelectedCategories((prev) =>
-                        prev.filter((id) => id !== categoryId),
-                      );
-                    }
-                  }}
-                />
-
+          <div className="create-category-selector">
+            {categories.map((category) => (
+              <button
+                type="button"
+                key={category.id}
+                className={`create-category-pill ${
+                  selectedCategories.includes(category.id) ? "selected" : ""
+                }`}
+                onClick={() => {
+                  if (selectedCategories.includes(category.id)) {
+                    setSelectedCategories((prev) =>
+                      prev.filter((id) => id !== category.id),
+                    );
+                  } else {
+                    setSelectedCategories((prev) => [...prev, category.id]);
+                  }
+                }}
+              >
+                {selectedCategories.includes(category.id) && "✓ "}
                 {category.name}
-              </label>
-            </div>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <br />
-
-        <div>
+        <div className="form-group">
           <label>Product Images</label>
 
-          <br />
+          <label className="upload-box">
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const newImages = Array.from(e.target.files);
+                setImages((prev) => [...prev, ...newImages]);
+                e.target.value = "";
+              }}
+            />
 
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={(e) => {
-              setImages(Array.from(e.target.files));
-            }}
-          />
+            <div className="upload-content">
+              <h3>Upload Product Images</h3>
 
-          <p>
-            Selected Images: <strong>{images.length}</strong>
-          </p>
+              <p>Drag and drop or click to browse</p>
+
+              <span>{images.length} image(s) selected</span>
+            </div>
+          </label>
+
+          {images.length > 0 && (
+            <div className="selected-images-preview">
+              {images.map((image, index) => (
+                <div className="image-preview-card" key={index}>
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt={image.name}
+                    className="image-preview"
+                  />
+
+                  <button
+                    type="button"
+                    className="remove-image-btn"
+                    onClick={() => {
+                      setImages((prev) => prev.filter((_, i) => i !== index));
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <br />
-
-        <button type="submit">Create Product</button>
+        <button className="create-submit-btn" type="submit">
+          Create Product
+        </button>
       </form>
     </div>
   );
